@@ -1,7 +1,7 @@
 /* eslint-env jasmine */
 const dep2neo4j = require('../src/dep2neo4j')
 const n4j = require('neo4j-driver')
-describe('Multiple spies, when created manually', function () {
+describe('dep2neo4j', function () {
   let oldDriverFun
   let driverSpyObject
   let sessionSpyObject
@@ -24,16 +24,16 @@ describe('Multiple spies, when created manually', function () {
     }
   })
 
-  it('creates spies for each requested function', async function () {
-    await dep2neo4j.genGraph('test/start.js', 'bolt://127.0.0.1', false)
+  it('creates full dependency graph', async function () {
+    await dep2neo4j.genGraph('test/start.js', 'FAKE', false)
     expect(sessionSpyObject.run).toHaveBeenCalled()
     expect(sessionSpyObject.run).not.toHaveBeenCalledTimes(8)
     expect(sessionSpyObject.close).toHaveBeenCalledTimes(1)
     expect(driverSpyObject.close).toHaveBeenCalledTimes(1)
   })
 
-  it('creates spies for each requested function', async function () {
-    await dep2neo4j.genGraph('test/start.js', 'bolt://127.0.0.1', true)
+  it('creates "local" dependency graph', async function () {
+    await dep2neo4j.genGraph('test/start.js', 'FAKE', true)
     expect(sessionSpyObject.run).toHaveBeenCalledTimes(8)
     expect(sessionSpyObject.close).toHaveBeenCalledTimes(1)
     expect(driverSpyObject.close).toHaveBeenCalledTimes(1)

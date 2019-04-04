@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 const path = require('path')
 const base = process.cwd()
 const through = require('through2')
@@ -9,7 +8,6 @@ function genGraph (file, neo, nonode) {
   return new Promise(function (resolve, reject) {
     let deps = []
     const b = browserify()
-    console.warn('PARSING.')
     b.pipeline.get('deps').push(through.obj((row, enc, next) => { delete row.source; deps.push(row); next() }, () => resolve(sendToDatabase(deps, neo, nonode))))
     b.add(file)
     b.bundle()
@@ -41,7 +39,6 @@ async function upload (neo, params) {
   const driver = require('neo4j-driver').v1.driver(neo)
   const db = driver.session()
 
-  console.warn('SENDING TO DATABASE.')
   // delete all File nodes
   for (const query of [
     'MATCH(f:File) DETACH DELETE f;'
@@ -66,5 +63,4 @@ async function upload (neo, params) {
   // disconnect
   await db.close()
   await driver.close()
-  console.warn('READY.')
 }

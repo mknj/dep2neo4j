@@ -7,8 +7,8 @@
     "beauty": "standard --fix src/*.js spec/*.js",
     "test": "nyc jasmine"
   },
-  "bin" : {
-    "dep2neo4j" : "./src/cli.js"
+  "bin": {
+    "dep2neo4j": "./src/cli.js"
   },
   "author": "mk@mknj.de",
   "license": "ISC",
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "jasmine": "^3.4.0",
+    "jasmine-spec-reporter": "^4.2.1",
     "nyc": "^13.3.0",
     "standard": "^12.0.1"
   }

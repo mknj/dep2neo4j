@@ -12,7 +12,7 @@ const argv = require('yargs')
     describe: 'url of neo4j server'
   })
   .usage('$0 [OPTIONS] filename')
-  .example('$0 app.js"', 'list app.js and all its dependencies')
+  .example('$0 app.js', 'list app.js and all its dependencies')
   .example('$0 app.js -n ', 'list app.js and all dependencies excluding node_modules')
   .demandCommand(1, 1)
   .help()
