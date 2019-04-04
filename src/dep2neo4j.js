@@ -4,33 +4,16 @@ const base = process.cwd()
 const through = require('through2')
 const browserify = require('browserify')
 
-const argv = require('yargs')
-  .option('no-node-modules', {
-    alias: 'n',
-    type: 'boolean',
-    describe: 'exclude the node_nodules folder'
+module.exports = { genGraph }
+function genGraph (file, neo, nonode) {
+  return new Promise(function (resolve, reject) {
+    let deps = []
+    const b = browserify()
+    console.warn('PARSING.')
+    b.pipeline.get('deps').push(through.obj((row, enc, next) => { delete row.source; deps.push(row); next() }, () => resolve(sendToDatabase(deps, neo, nonode))))
+    b.add(file)
+    b.bundle()
   })
-  .option('neo', {
-    default: 'bolt://127.0.0.1',
-    type: 'string',
-    describe: 'url of neo4j server'
-  })
-  .usage('$0 [OPTIONS] filename')
-  .example('$0 app.js"', 'list app.js and all its dependencies')
-  .example('$0 app.js -n ', 'list app.js and all dependencies excluding node_modules')
-  .demandCommand(1, 1)
-  .help()
-  .argv
-
-main(argv._[0], argv.neo)
-
-function main (file, neo) {
-  let deps = []
-  const b = browserify()
-  console.warn("PARSING.")
-  b.pipeline.get('deps').push(through.obj((row, enc, next) => { delete row.source; deps.push(row); next() }, () => sendToDatabase(deps, neo)))
-  b.add(file)
-  b.bundle()
 }
 
 function flattenDeps (deps) {
@@ -48,8 +31,8 @@ function flattenDeps (deps) {
   return res
 }
 
-async function sendToDatabase (deps, neo) {
-  const params = flattenDeps(deps)
+async function sendToDatabase (deps, neo, nonode) {
+  const params = flattenDeps(deps).filter(p => !nonode || !p.src.includes('node'))
   await upload(neo, params)
 }
 
@@ -58,24 +41,15 @@ async function upload (neo, params) {
   const driver = require('neo4j-driver').v1.driver(neo)
   const db = driver.session()
 
-  console.warn("SENDING TO DATABASE.")
-  // clear old entries
-  // TOO MUCH MEMORY REQUIRED for 'MATCH((:File)-[r]-()) MATCH(f:File) MATCH((:node_module)-[r2]-()) MATCH((n:node_module)) DELETE r,f,r2,n;'
+  console.warn('SENDING TO DATABASE.')
+  // delete all File nodes
   for (const query of [
-    'MATCH((:File)-[r]-()) DELETE r;',
-    'MATCH(f:File) DELETE f;',
-    'MATCH((:Dep)-[r]-()) DELETE r;',
-    'MATCH((n:Dep)) DELETE n',
-    'MATCH((:Dependency)-[r]-()) DELETE r;',
-    'MATCH((n:Dependency)) DELETE n'
+    'MATCH(f:File) DETACH DELETE f;'
   ]) {
     await db.run(query)
   }
 
   for (const param of params) {
-    if (argv.verbose) {
-      console.log(JSON.stringify(param))
-    }
     await db.run(`
       MERGE(s:File {fullname:$src})
       MERGE(d:File {fullname:$dest})
@@ -90,7 +64,7 @@ async function upload (neo, params) {
   await db.run('MATCH (a) WHERE NOT (a)-[:DEPENDS]->() set a:Destination RETURN a')
 
   // disconnect
-  db.close()
-  driver.close()
-  console.warn("READY.")
+  await db.close()
+  await driver.close()
+  console.warn('READY.')
 }
